@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block search_bar %}
+    <form action="{% url 'index' %}" class="row justify-content-center" method="post">
+        {% csrf_token %}
+        <div class="col col-md-6 col-12">
+            <label for="genreList" class="form-label">Genre Search</label>
+            <label for="locationSearch" class="form-label">Location Search</label>
+
+            <div class="input-group mb-3">
+                <input name="genre-input" class="form-control" id="genreList" list="genres"
+                       placeholder="Type to search by genre" aria-label="genreSearch">
+                <datalist id="genres">
+                    <option value="Music">
+                    <option value="Sports">
+                    <option value="Theater">
+                    <option value="Family">
+                    <option value="Arts & Theater">
+                    <option value="Concerts">
+                    <option value="Comedy">
+                    <option value="Dance">
+                </datalist>
+
+                <input name="location-input" type="text" class="form-control" id="locationSearch"
+                       placeholder="Enter a city e.g., Hartford" aria-label="locationSearch">
+
+                <button type="submit" class="btn btn-primary" id="searchButton">SEARCH</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="row justify-content-center">
+        <div class="col col-6">
+            <div id="genreErrorAlert"></div>
+            <div id="locationErrorAlert"></div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="container" id="resultBox">
+
+    {% for event in event_listings %}
+
+        <div class="card-body row my-3 shadow rounded border-black">
+
+            <div class="col my-md-4 col-md-4 col-12 p-0">
+                <img class="rounded img-fluid card-img-top" src="{{ event.event_image }}"
+                     alt="{{ event.event_name }}">
+            </div>
+
+            <div class="col">
+                <div class="row">
+                    <div class="col align-self-center mx-md-0">
+                        <h3 class="card-title">{{ event.event_name }}</h3>
+                    </div>
+
+                    <div class="col align-self-start text-end m-3">
+                        <h5>{{ event.event_date_time }}</h5>
+                        <h6>fix it later</h6>
+                        <a href="{{ event.event_tickets }}" class="btn btn-outline-primary"><i
+                                class="bi bi-ticket-detailed"></i> Find Tickets</a>
+
+                        <form action="{% url 'list_add' %}" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="event-name" value="{{ event.event_name }}">
+                            <input type="hidden" name="event-image" value="{{ event.event_image }}">
+                            <input type="hidden" name="event-venue" value="{{ event.event_venue }}">
+                            <input type="hidden" name="event-city" value="{{ event.event_city }}">
+                            <input type="hidden" name="event-state" value="{{ event.event_state }}">
+                            <input type="hidden" name="event-address" value="{{ event.event_address }}">
+                            <input type="hidden" name="event-tickets" value="{{ event.event_tickets }}">
+                            <input type="hidden" name="event-id" value="{{ event.event_id }}">
+                             <button type="submit" class="btn btn-success">Favorite Event</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col col-12 align-self-end">
+                        <h3 class="text-secondary"><i class="bi bi-geo-alt-fill"></i>"{{ event.event_venue }}"</h3>
+                        <p class="text-secondary">
+                            {{ event.event_address }}<br>
+                            {{ event.event_city }}, {{ event.event_state }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+
+    {% endfor %}
+
+</div>
+{% endblock %}
+
+
+
+{% block script %}
+    $('#searchButton').click(function () {
+        const genreInput = $('#genreList').val();
+        const locationInput = $('#locationSearch').val();
+        const genreAlert = $('#genreErrorAlert');
+        const locationAlert = $('#locationErrorAlert');
+
+        genreAlert.empty();
+        locationAlert.empty();
+        $('#results').empty();
+
+        const appendAlert = (message, type) => {
+            const wrapper = document.createElement('div');
+
+            wrapper.innerHTML = [
+                `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+                `   <div>${message}</div>`,
+                '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                '</div>'
+            ].join('');
+
+            genreAlert.append(wrapper);
+        }
+
+        let errorState = false;
+        if (genreInput === "") {
+            appendAlert('Search term cannot be empty. Please enter a search term', 'danger', genreAlert);
+            console.log("ERROR: Void Genre")
+            errorState = true;
+        }
+        if (locationInput === "") {
+            appendAlert('City cannot be empty. Please enter a city', 'danger', locationAlert);
+            console.log("ERROR: Void Location")
+            errorState = true;
+        }
+        if (errorState) {
+            return;
+        }
+
+        $.ajax({
+            type: "GET",
+            url: `https://app.ticketmaster.com/discovery/v2/events.json?countryCode=US&classificationName=${genreInput}&city=${locationInput}&sort=date,asc&apikey=YGGgx0CLSlCN96D8iKHhfDoKcKAX4K18`,
+            async: true,
+            dataType: "json",
+            success: function (json) {
+                console.log(json);
+                $('#resultBox').empty();
+
+                const events = json._embedded?.events || [];
+                let resultSize = events.length;
+
+                $('#resultBox').append(`
+                    <div class="row justify-content-center p-3 mt-2 shadow">
+                        <div class="col p-3">
+                            <h3 class="text-secondary">${resultSize} events found</h3>
+                            <div id="results"></div>
+                        </div>
+                    </div>
+                `);
+
+                if (events.length === 0) {
+                    $('#results').append(`
+                        <div class="p-3 row justify-content-center">
+                            <div class="card-body col col-4">
+                                <p>Sorry... No results were found for the entered search term and city.</p>
+                            </div>
+                        </div>
+                    `);
+                }
+            },
+
+            error: function (xhr, status, err) {
+                console.log("AJAX ERROR")
+            }
+
+        });
+    });
+{% endblock %}

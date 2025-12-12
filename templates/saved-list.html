@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    <title>Saved List</title>
+{% endblock %}
+
+{% block content %}
+    <h1>Your saved events</h1>
+    <div class="container" id="resultBox">
+
+        {% for event in events %}
+            <div class="card-body row my-3 shadow rounded border-black">
+
+                <div class="col my-md-4 col-md-4 col-12 p-0">
+                    <img class="rounded img-fluid" src="{{ event.image_url }}" class="card-img-top"
+                         alt="{{ event.name }}">
+                </div>
+
+                <div class="col">
+                    <div class="row">
+                        <div class="col align-self-center mx-md-0">
+                            <h3 class="card-title">{{ event.name }}</h3>
+                        </div>
+
+                        <div class="col align-self-start text-end m-3">
+                            <h5>{{ event.date_time }}</h5>
+                            <h6>fix it later</h6>
+                            <a href="{{ event.tickets_url }}" class="btn btn-outline-primary"><i
+                                    class="bi bi-ticket-detailed"></i> Find Tickets</a>
+
+{#                            <a class="btn btn-warning" href="{% url 'list_update' event.id %}" role="button">Update</a>#}
+                            <a role="button" class="btn btn-danger" href="{% url 'list_delete' event.id %}">Remove</a>
+
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col col-12 align-self-end">
+                            <h3 class="text-secondary"><i class="bi bi-geo-alt-fill"></i>"{{ event.venue }}"</h3>
+                            <p class="text-secondary">
+                                {{ event.address }}<br>
+                                {{ event.city }}, {{ event.state }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+        {% endfor %}
+    </div>
+
+
+
+
+{% endblock %}

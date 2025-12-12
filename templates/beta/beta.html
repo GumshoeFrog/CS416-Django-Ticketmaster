@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Beta</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <style>
+        .dark-mode{
+            background-color: #181818;
+            color:white;
+        }
+
+        .form-switch .form-check-input:checked {
+            background-color: #383838;
+            border: none;
+        }
+    </style>
+</head>
+
+<body>
+<h1>you're not supposed to be here...</h1>
+<div class="container-fluid bg-dark">
+    <div class="navbar container-fluid p-3">
+      <div class="row text-light">
+        <div class="col form-check form-switch">
+{#            onclick="visualSwitch()"#}
+          <input class="form-check-input" type="checkbox" role="switch" id="switchCheckDefault">
+          <label class="form-check-label" for="switchCheckDefault">Night Mode</label>
+        </div>
+      </div>
+    </div>
+</div>
+
+        <div class="row text-center text-light">
+            <div class="col p-3">
+                <h1>Ticketmaster</h1>
+                <h2>Quickly find tickets around you</h2>
+            </div>
+        </div>
+
+        <form class="row justify-content-center" method="get">
+            <div class="col col-md-6 col-12">
+                <label for="genreList" class="form-label">Genre Search</label>
+                <label for="locationSearch" class="form-label">Location Search</label>
+
+                <div class="input-group mb-3">
+                    <input name="genreList" class="form-control" id="genreList" list="genres" placeholder="Type to search by genre" aria-label="genreSearch">
+                        <datalist id="genres">
+                            <option value="Music">
+                            <option value="Sports">
+                            <option value="Theater">
+                            <option value="Family">
+                            <option value="Arts & Theater">
+                            <option value="Concerts">
+                            <option value="Comedy">
+                            <option value="Dance">
+                        </datalist>
+
+                    <input name="locationList" type="text" class="form-control" id="locationSearch" placeholder="Enter a city e.g., Hartford" aria-label="locationSearch">
+
+                    <button type="button" class="btn btn-primary" id="searchButton">SEARCH</button>
+                </div>
+
+            </div>
+        </form>
+
+        <div class="row justify-content-center">
+            <div class="col col-6">
+                <div id="genreErrorAlert"></div>
+                <div id="locationErrorAlert"></div>
+            </div>
+        </div>
+
+
+<div class="container" id="resultBox">
+
+</div>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+<script src="js/ticketmaster.js"></script>
+<script>
+const toggleSwitch = document.getElementById('switchCheckDefault');
+const bodyElement = document.body;
+
+window.onload = function(){
+    toggleSwitch.checked = false;
+    bodyElement.classList.remove('dark-mode');
+}
+
+toggleSwitch.addEventListener('change', function(){
+    if (this.checked){
+        bodyElement.classList.add('dark-mode');
+    }
+    else{
+        bodyElement.classList.remove('dark-mode');
+    }
+
+    $('#searchButton').click(function(){
+        const genreInput = $('#genreList').val();
+        const locationInput = $('#locationSearch').val();
+        const genreAlert = $('#genreErrorAlert');
+        const locationAlert = $('#locationErrorAlert');
+
+        genreAlert.empty();
+        locationAlert.empty();
+        $('#results').empty();
+
+        const appendAlert = (message, type) =>{
+            const wrapper = document.createElement('div');
+
+            wrapper.innerHTML = [
+                `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+                `   <div>${message}</div>`,
+                '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                '</div>'
+            ].join('');
+
+            genreAlert.append(wrapper);
+        }
+
+        let errorState = false;
+        if(genreInput === ""){
+            appendAlert('Search term cannot be empty. Please enter a search term', 'danger', genreAlert);
+            console.log("ERROR: Void Genre")
+            errorState = true;
+        }
+        if(locationInput === ""){
+            appendAlert('City cannot be empty. Please enter a city', 'danger', locationAlert);
+            console.log("ERROR: Void Location")
+            errorState = true;
+        }
+        if(errorState){
+            return;
+        }
+
+        $.ajax({
+            type:"GET",
+            url:`https://app.ticketmaster.com/discovery/v2/events.json?countryCode=US&classificationName=${genreInput}&city=${locationInput}&sort=date,asc&apikey=YGGgx0CLSlCN96D8iKHhfDoKcKAX4K18`,
+            async:true,
+            dataType: "json",
+            success: function(json){
+                console.log(json);
+                $('#resultBox').empty();
+
+                const events = json._embedded?.events || [];
+                let resultSize = events.length;
+
+                $('#resultBox').append(`
+                    <div class="row justify-content-center text-bg-light p-3 mt-2 shadow">
+                        <div class="col p-3 dark-mode">
+                            <h3 class="text-secondary">${resultSize} events found</h3>
+                            <div id="results"></div>
+                        </div>
+                    </div>
+                `);
+
+                if (events.length === 0) {
+                    $('#results').append(`
+                        <div class="p-3 row justify-content-center">
+                            <div class="card-body col col-4">
+                                <p>Sorry... No results were found for the entered search term and city.</p>
+                            </div>
+                        </div>
+                    `);
+                    return;
+                }
+
+                events.forEach(event => {
+                    const eventName = event.name;
+                    const eventImage = event.images?.[0]?.url || '';
+                    const eventDateTime = event.dates?.start?.dateTime || '';
+                    const startDate = new Date(eventDateTime).toDateString();
+                    const startTime = new Date(eventDateTime).toLocaleTimeString();
+                    const venue = event._embedded?.venues?.[0];
+                    const eventVenue = venue?.name || '';
+                    const eventCity = venue?.city?.name || '';
+                    const eventState = venue?.state?.name || '';
+                    const eventAddress = venue?.address?.line1 || '';
+                    const eventTicket = event.url;
+
+                    $('#results').append(`
+
+                        <div class="card-body row my-3 shadow rounded border">
+
+                            <div class="col my-md-4 col-md-4 col-12 p-0">
+                                <img class="rounded img-fluid" src="${eventImage}" class="card-img-top" alt="${eventName}">
+                            </div>
+
+                            <div class="col">
+                                <div class="row">
+                                    <div class="col align-self-center mx-md-0">
+                                        <h3 class="card-title">${eventName}</h3>
+                                    </div>
+
+                                    <div class="col align-self-start text-end m-3">
+                                        <h5>${startDate}</h5>
+                                        <h6>${startTime}</h6>
+                                        <a href="${eventTicket}" class="btn btn-outline-primary"><i class="bi bi-ticket-detailed"></i> Find Tickets</a>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col col-12 align-self-end">
+                                        <h3 class="text-secondary"><i class="bi bi-geo-alt-fill"></i>"${eventVenue}"</h3>
+                                        <p class="text-secondary">
+                                            ${eventAddress}<br>
+                                            ${eventCity}, ${eventState}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    `);
+                });
+            },
+
+            error: function (xhr, status, err){
+                console.log("AJAX ERROR")
+            }
+
+        });
+    });
+})
+
+
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{#Convert this into a script pop-up for saved-list.html#}
+{% block title %}
+    <title>Delete Confirmation</title>
+{% endblock %}
+
+{% block content %}
+    <form action="{% url 'list_delete' event.id %}" method="post">
+        {% csrf_token %}
+    <h3>Are you sure you want to remove {{ event.name }}?</h3>
+    <input type="submit" value="Delete">
+    </form>
+{% endblock %}
